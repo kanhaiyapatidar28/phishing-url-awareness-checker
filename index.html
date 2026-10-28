@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>EWB Phishing URL Awareness Checker | Defensive Cybersecurity Tool</title>
+  <meta name="description" content="A defensive cybersecurity educational tool that inspects visible URL text for common phishing indicators without visiting websites.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #0a0e17;
+      --bg-card: rgba(18, 26, 43, 0.75);
+      --bg-card-hover: rgba(25, 36, 58, 0.85);
+      --border-color: rgba(66, 153, 225, 0.2);
+      --border-glow: rgba(0, 242, 254, 0.4);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-rose: #ef4444;
+      --font-main: 'Outfit', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      font-family: var(--font-main);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 20%, rgba(79, 172, 254, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 85% 75%, rgba(0, 242, 254, 0.06) 0%, transparent 40%),
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1050px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: rgba(0, 242, 254, 0.1);
+      border: 1px solid rgba(0, 242, 254, 0.3);
+      padding: 0.35rem 1rem;
+      border-radius: 999px;
+      font-size: 0.825rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      color: var(--accent-cyan);
+      margin-bottom: 1.25rem;
+      text-transform: uppercase;
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.2);
+    }
+
+    .badge-pill span.dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    h1 {
+      font-size: 2.75rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #ffffff 40%, var(--accent-cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.75rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    /* Inspector Card */
+    .inspector-card {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+      margin-bottom: 2rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .inspector-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--accent-cyan), var(--accent-blue), transparent);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 0.75rem;
+      position: relative;
+      margin-bottom: 1.25rem;
+    }
+
+    .input-container {
+      position: relative;
+      flex: 1;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 1rem 1rem 1rem 3.25rem;
+      background: rgba(10, 14, 23, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 1rem;
+      transition: all 0.25s ease;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(0, 242, 254, 0.2);
+    }
+
+    .btn-inspect {
+      padding: 1rem 1.75rem;
+      background: linear-gradient(135deg, var(--accent-blue), #00c6ff);
+      color: #0a0e17;
+      font-weight: 700;
+      font-size: 1rem;
+      font-family: var(--font-main);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 15px rgba(0, 242, 254, 0.3);
+      white-space: nowrap;
+    }
+
+    .btn-inspect:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.45);
+    }
+
+    .btn-inspect:active {
+      transform: translateY(0);
+    }
+
+    /* Samples Row */
+    .sample-pills-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+      font-weight: 500;
+    }
+
+    .sample-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .pill-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 0.4rem 0.85rem;
+      border-radius: 8px;
+      color: #cbd5e1;
+      font-size: 0.825rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pill-btn:hover {
+      background: rgba(0, 242, 254, 0.15);
+      border-color: var(--accent-cyan);
+      color: #fff;
+    }
+
+    /* Results Dashboard */
+    .results-section {
+      display: none;
+      margin-top: 2rem;
+      animation: fadeIn 0.35s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .results-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+      .input-wrapper { flex-direction: column; }
+      .results-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 2.1rem; }
+    }
+
+    .score-card {
+      background: rgba(10, 14, 23, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 1.75rem 1.25rem;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .score-circle {
+      width: 130px;
+      height: 130px;
+      border-radius: 50%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+      position: relative;
+      background: rgba(0, 0, 0, 0.4);
+      border: 6px solid var(--border-color);
+      box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+      transition: all 0.4s ease;
+    }
+
+    .score-value {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1;
+      font-family: var(--font-mono);
+    }
+
+    .score-denom {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 0.2rem;
+    }
+
+    .risk-badge {
+      padding: 0.4rem 1.25rem;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Risk Categories */
+    .risk-low {
+      color: var(--accent-emerald);
+      border-color: rgba(16, 185, 129, 0.5) !important;
+      box-shadow: 0 0 25px rgba(16, 185, 129, 0.25);
+    }
+    .risk-badge.badge-low {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .risk-medium {
+      color: var(--accent-amber);
+      border-color: rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+    }
+    .risk-badge.badge-medium {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--accent-amber);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .risk-high {
+      color: var(--accent-rose);
+      border-color: rgba(239, 68, 68, 0.5) !important;
+      box-shadow: 0 0 25px rgba(239, 68, 68, 0.3);
+    }
+    .risk-badge.badge-high {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--accent-rose);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+
+    /* Findings Panel */
+    .findings-card {
+      background: rgba(10, 14, 23, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 16px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .findings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1rem;
+      padding-bottom: 0.75rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .findings-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .findings-count {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      background: rgba(255, 255, 255, 0.08);
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      color: #cbd5e1;
+    }
+
+    .findings-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .finding-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .finding-item.warning {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.25);
+      color: #fca5a5;
+    }
+
+    .finding-item.info {
+      background: rgba(16, 185, 129, 0.08);
+      border-color: rgba(16, 185, 129, 0.25);
+      color: #86efac;
+    }
+
+    .finding-icon {
+      flex-shrink: 0;
+      margin-top: 0.15rem;
+    }
+
+    /* Educational Alert Banner */
+    .edu-alert {
+      background: rgba(245, 158, 11, 0.08);
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      color: #fbbf24;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+    }
+
+    /* Six Warning Signs Grid */
+    .signs-section {
+      margin-top: 3.5rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      font-size: 0.95rem;
+    }
+
+    .signs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .sign-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 1.25rem;
+      transition: all 0.25s ease;
+    }
+
+    .sign-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-glow);
+      transform: translateY(-3px);
+    }
+
+    .sign-num {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-cyan);
+      background: rgba(0, 242, 254, 0.1);
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.5rem;
+    }
+
+    .sign-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.4rem;
+      color: #fff;
+    }
+
+    .sign-body {
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .sign-limit {
+      font-size: 0.8rem;
+      color: #cbd5e1;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 0.5rem;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      margin-top: 4rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    footer a {
+      color: var(--accent-cyan);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <div class="badge-pill">
+        <span class="dot"></span> EWB Courses • Cybersecurity Mini Project
+      </div>
+      <h1>Phishing URL Awareness Checker</h1>
+      <p class="subtitle">
+        Defensive security analyzer that inspects visible URL text patterns for deception warning signs without visiting target websites.
+      </p>
+    </header>
+
+    <main>
+      <div class="inspector-card">
+        <div class="input-wrapper">
+          <div class="input-container">
+            <svg class="input-icon" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <input type="text" id="urlInput" placeholder="Enter a URL to inspect (e.g. https://www.example.com/login)..." autocomplete="off" spellcheck="false">
+          </div>
+          <button id="inspectBtn" class="btn-inspect">
+            <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            Inspect URL
+          </button>
+        </div>
+
+        <div class="sample-pills-label">Quick Test Workbook Samples:</div>
+        <div class="sample-pills">
+          <button class="pill-btn" onclick="testSample('https://www.example.com/login')">1. Legitimate login</button>
+          <button class="pill-btn" onclick="testSample('http://192.0.2.10/account')">2. IP Address + HTTP</button>
+          <button class="pill-btn" onclick="testSample('http://example.com@sample.invalid/login')">3. @ Symbol</button>
+          <button class="pill-btn" onclick="testSample('https://a.b.c.d.e.example.invalid/path')">4. Multi Subdomains</button>
+          <button class="pill-btn" onclick="testSample('https://xn--example.invalid/')">5. Punycode</button>
+        </div>
+
+        <!-- Results Dashboard -->
+        <div id="resultsSection" class="results-section">
+          <div class="results-grid">
+            <div class="score-card">
+              <div id="scoreCircle" class="score-circle risk-low">
+                <span id="scoreVal" class="score-value">0</span>
+                <span class="score-denom">/ 100 RISK</span>
+              </div>
+              <div id="riskBadge" class="risk-badge badge-low">LOW RISK</div>
+            </div>
+
+            <div class="findings-card">
+              <div>
+                <div class="findings-header">
+                  <span class="findings-title">
+                    <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    Inspection Findings
+                  </span>
+                  <span id="findingsCount" class="findings-count">1 result</span>
+                </div>
+                <ul id="findingsList" class="findings-list">
+                  <!-- Injected via JavaScript -->
+                </ul>
+              </div>
+
+              <div class="edu-alert">
+                <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" style="flex-shrink:0;">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span><strong>Security Note:</strong> Zero warning signs found does <strong>NOT</strong> prove a URL is safe. Never enter passwords from unexpected links.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Six Warning Signs Reference -->
+      <section class="signs-section">
+        <h2 class="section-title">
+          <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          The Six Warning Signs
+        </h2>
+        <p class="section-desc">Key heuristics analyzed by this tool according to the EWB Cybersecurity project syllabus.</p>
+
+        <div class="signs-grid">
+          <div class="sign-card">
+            <span class="sign-num">CHECK 01</span>
+            <h3 class="sign-title">@ Symbol in URL</h3>
+            <p class="sign-body">Text before <code>@</code> is treated as authority/login metadata and ignored by browsers; the real destination is after the <code>@</code>.</p>
+            <p class="sign-limit"><strong>Honest limit:</strong> Rare in normal links, but possible in basic HTTP authentication.</p>
+          </div>
+
+          <div class="sign-card">
+            <span class="sign-num">CHECK 02</span>
+            <h3 class="sign-title">Very Long URL (> 100 chars)</h3>
+            <p class="sign-body">Excessively long paths and queries can push malicious destination domains off-screen on mobile devices and narrow address bars.</p>
+            <p class="sign-limit"><strong>Honest limit:</strong> Many legitimate tracking links or deep search URLs are naturally long.</p>
+          </div>
+
+          <div class="sign-card">
+            <span class="sign-num">CHECK 03</span>
+            <h3 class="sign-title">IP Address Hostname</h3>
+            <p class="sign-body">Legitimate organizations use trusted domain names. Bare numeric IPv4 addresses often obscure owner identity.</p>
+            <p class="sign-limit"><strong>Honest limit:</strong> Local routers, intranet services, and developer test environments use IPs.</p>
+          </div>
+
+          <div class="sign-card">
+            <span class="sign-num">CHECK 04</span>
+            <h3 class="sign-title">Many Subdomain Segments</h3>
+            <p class="sign-body">Stacking subdomains (e.g. <code>paypal.com.verify.account.phish.invalid</code>) tricks users into reading trusted brand names early.</p>
+            <p class="sign-limit"><strong>Honest limit:</strong> Large enterprise networks and CDNs sometimes legitimately use multi-level subdomains.</p>
+          </div>
+
+          <div class="sign-card">
+            <span class="sign-num">CHECK 05</span>
+            <h3 class="sign-title">Punycode Marker (xn--)</h3>
+            <p class="sign-body">Internationalized Domain Names (IDNs) can use look-alike Cyrillic or Greek characters to impersonate legitimate Latin domain names.</p>
+            <p class="sign-limit"><strong>Honest limit:</strong> Millions of genuine non-English websites legitimately use IDN punycode.</p>
+          </div>
+
+          <div class="sign-card">
+            <span class="sign-num">CHECK 06</span>
+            <h3 class="sign-title">HTTP Instead of HTTPS</h3>
+            <p class="sign-body">Plain HTTP traffic is unencrypted and vulnerable to intercept. HTTPS encrypts transmission, though HTTPS alone does not guarantee safety.</p>
+            <p class="sign-limit"><strong>Honest limit:</strong> Over 90% of phishing sites today use HTTPS certificates.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Cybersecurity Mini Project by <strong>Kanhaiya Patidar</strong> • EWB Courses</p>
+      <p style="margin-top: 0.4rem;">
+        <a href="https://github.com/kanhaiyapatidar28/phishing-url-awareness-checker" target="_blank" rel="noopener">GitHub Repository</a>
+      </p>
+    </footer>
+  </div>
+
+  <script>
+    // Client-side inspector engine matching phishing_checker.py exactly
+    function inspectUrlLocal(rawUrl) {
+      const url = rawUrl.trim();
+      const findings = [];
+
+      if (!url) return { findings: ["No URL entered."], score: 0, category: "Low" };
+
+      if (/[\s\x00-\x1f]/.test(url)) {
+        findings.push("Contains whitespace or control characters.");
+      }
+
+      let candidate = url.includes("://") ? url : "http://" + url;
+      let parsed;
+      try {
+        parsed = new URL(candidate);
+      } catch (e) {
+        return { findings: ["This text is not a valid URL format."], score: 30, category: "Medium" };
+      }
+
+      const host = (parsed.hostname || "").toLowerCase();
+      if (!host) {
+        return { findings: ["Could not identify a hostname."], score: 20, category: "Medium" };
+      }
+
+      if (candidate.includes("@")) {
+        findings.push("Contains an @ symbol; inspect carefully.");
+      }
+
+      if (url.length > 100) {
+        findings.push("Unusually long URL (over 100 characters).");
+      }
+
+      const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+      if (isIp) {
+        findings.push("Uses an IP address instead of a familiar domain.");
+      }
+
+      const labels = host.replace(/\.$/, "").split(".").filter(Boolean);
+      if (labels.length >= 5) {
+        findings.push("Contains many hostname segments/subdomains.");
+      }
+
+      if (host.includes("xn--") || labels.some(l => l.startsWith("xn--"))) {
+        findings.push("Contains a punycode-style hostname.");
+      }
+
+      if (parsed.protocol === "http:") {
+        findings.push("Uses HTTP. HTTPS alone does not prove trust.");
+      }
+
+      if (findings.length === 0) {
+        findings.push("No listed warning signs found. This does NOT prove safety.");
+      }
+
+      const weights = {
+        "Contains an @ symbol; inspect carefully.": 25,
+        "Unusually long URL (over 100 characters).": 15,
+        "Uses an IP address instead of a familiar domain.": 25,
+        "Contains many hostname segments/subdomains.": 20,
+        "Contains a punycode-style hostname.": 20,
+        "Uses HTTP. HTTPS alone does not prove trust.": 10,
+        "Contains whitespace or control characters.": 10,
+        "This text is not a valid URL format.": 30,
+        "Could not identify a hostname.": 20,
+      };
+
+      let score = 0;
+      const unique = new Set(findings);
+      for (const f of unique) {
+        score += (weights[f] || 0);
+      }
+      score = Math.min(score, 100);
+
+      let category = "Low";
+      if (score >= 50) category = "High";
+      else if (score >= 20) category = "Medium";
+
+      return { findings, score, category };
+    }
+
+    async function analyzeUrl(rawUrl) {
+      // Try serverless API first, fallback to local engine
+      try {
+        const res = await fetch(`/api?url=${encodeURIComponent(rawUrl)}`, { cache: 'no-store' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.findings) return data;
+        }
+      } catch (err) {
+        // Fallback gracefully
+      }
+      return inspectUrlLocal(rawUrl);
+    }
+
+    async function handleInspection() {
+      const input = document.getElementById("urlInput");
+      const val = input.value.trim();
+      const resultsSection = document.getElementById("resultsSection");
+      const scoreVal = document.getElementById("scoreVal");
+      const scoreCircle = document.getElementById("scoreCircle");
+      const riskBadge = document.getElementById("riskBadge");
+      const findingsList = document.getElementById("findingsList");
+      const findingsCount = document.getElementById("findingsCount");
+
+      const result = await analyzeUrl(val);
+
+      scoreVal.textContent = result.score;
+      findingsCount.textContent = `${result.findings.length} item(s)`;
+
+      // Update badge and circle classes
+      scoreCircle.className = "score-circle";
+      riskBadge.className = "risk-badge";
+
+      if (result.category === "High") {
+        scoreCircle.classList.add("risk-high");
+        riskBadge.classList.add("badge-high");
+        riskBadge.textContent = "HIGH RISK";
+      } else if (result.category === "Medium") {
+        scoreCircle.classList.add("risk-medium");
+        riskBadge.classList.add("badge-medium");
+        riskBadge.textContent = "MEDIUM RISK";
+      } else {
+        scoreCircle.classList.add("risk-low");
+        riskBadge.classList.add("badge-low");
+        riskBadge.textContent = "LOW RISK";
+      }
+
+      // Render findings
+      findingsList.innerHTML = "";
+      result.findings.forEach(finding => {
+        const li = document.createElement("li");
+        const isSafeMessage = finding.includes("No listed warning");
+        li.className = `finding-item ${isSafeMessage ? 'info' : 'warning'}`;
+
+        const iconSvg = isSafeMessage
+          ? `<svg class="finding-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>`
+          : `<svg class="finding-icon" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>`;
+
+        li.innerHTML = `${iconSvg} <span>${finding}</span>`;
+        findingsList.appendChild(li);
+      });
+
+      resultsSection.style.display = "block";
+    }
+
+    function testSample(url) {
+      const input = document.getElementById("urlInput");
+      input.value = url;
+      handleInspection();
+      window.scrollTo({ top: input.offsetTop - 40, behavior: 'smooth' });
+    }
+
+    document.getElementById("inspectBtn").addEventListener("click", handleInspection);
+    document.getElementById("urlInput").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") handleInspection();
+    });
+  </script>
+</body>
+</html>
