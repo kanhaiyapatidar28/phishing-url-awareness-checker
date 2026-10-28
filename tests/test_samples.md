@@ -1,6 +1,6 @@
 # Test Results
 
-Python version used: 3.12.6 | Operating system: Windows 11 | Date: 2026-10-27
+Python version used: 3.12.6 | Operating system: Windows 11 | Date: 2026-10-28
 
 | # | Input | Expected result | Actual result | Pass/Fail |
 |---|---|---|---|---|
@@ -12,5 +12,5 @@ Python version used: 3.12.6 | Operating system: Windows 11 | Date: 2026-10-27
 
 ## Notes
 
-The checker inspects visible URL text only and does not visit any website.  
-A URL with no listed warning signs is not guaranteed to be safe; inspect the sender and destination carefully.
+What I learned: A defensive security tool can analyze URL structure, flags, and anomalies (such as punycode, raw IP addresses, and @ signs) completely offline without sending network requests or risking malware.  
+What surprised me: A URL with zero warnings is never guaranteed to be safe—clever attackers can register authentic-looking domains that pass static syntax tests. HTTPS alone does not prove a site is honest.
